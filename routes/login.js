@@ -26,9 +26,9 @@ module.exports = function login () {
 
   return (req, res, next) => {
     verifyPreLoginChallenges(req)
-    models.sequelize.query(`SELECT * FROM Users WHERE email = '${req.body.email || ''}' AND password = '${insecurity.hash(req.body.password || '')}' AND deletedAt IS NULL`, { model: models.User, plain: true })
+    models.User.findOne({ where: { email: req.body.email || '', password: insecurity.hash(req.body.password || ''), deletedAt: null } })
       .then((authenticatedUser) => {
-        let user = utils.queryResultToJson(authenticatedUser)
+        let user = authenticatedUser ? utils.queryResultToJson(authenticatedUser) : { data: null }
         const rememberedEmail = insecurity.userEmailFrom(req)
         if (rememberedEmail && req.body.oauth) {
           models.User.findOne({ where: { email: rememberedEmail } }).then(rememberedUser => {

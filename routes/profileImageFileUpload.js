@@ -5,6 +5,8 @@
 
 const utils = require('../lib/utils')
 const fs = require('fs')
+const path = require('path')
+const crypto = require('crypto')
 const models = require('../models/index')
 const insecurity = require('../lib/insecurity')
 const logger = require('../lib/logger')
@@ -18,7 +20,21 @@ module.exports = function fileUpload () {
     if (uploadedFileType !== null && utils.startsWith(uploadedFileType.mime, 'image')) {
       const loggedInUser = insecurity.authenticatedUsers.get(req.cookies.token)
       if (loggedInUser) {
-        fs.open(`frontend/dist/frontend/assets/public/images/uploads/${loggedInUser.data.id}.${uploadedFileType.ext}`, 'w', function (err, fd) {
+        const allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'svg']
+        if (!allowedExts.includes(uploadedFileType.ext)) {
+          next(new Error('Invalid file extension'))
+          return
+        }
+        const hashedId = crypto.createHash('sha256').update(String(loggedInUser.data.id)).digest('hex').substring(0, 16)
+        const baseDir = path.join('frontend', 'dist', 'frontend', 'assets', 'public', 'images', 'uploads')
+        const fileName = `${hashedId}.${uploadedFileType.ext}`
+        const fullPath = path.join(baseDir, fileName)
+        const resolvedPath = path.resolve(fullPath)
+        if (!resolvedPath.startsWith(path.resolve(baseDir))) {
+          next(new Error('Invalid file path'))
+          return
+        }
+        fs.open(fullPath, 'w', function (err, fd) {
           if (err) logger.warn('Error opening file: ' + err.message)
           fs.write(fd, buffer, 0, buffer.length, null, function (err) {
             if (err) logger.warn('Error writing file: ' + err.message)
@@ -26,7 +42,7 @@ module.exports = function fileUpload () {
           })
         })
         models.User.findByPk(loggedInUser.data.id).then(user => {
-          return user.update({ profileImage: `assets/public/images/uploads/${loggedInUser.data.id}.${uploadedFileType.ext}` })
+          return user.update({ profileImage: `assets/public/images/uploads/${fileName}` })
         }).catch(error => {
           next(error)
         })

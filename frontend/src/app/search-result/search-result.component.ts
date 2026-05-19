@@ -12,7 +12,6 @@ import { MatPaginator } from '@angular/material/paginator'
 import { forkJoin, Subscription } from 'rxjs'
 import { MatTableDataSource } from '@angular/material/table'
 import { MatDialog } from '@angular/material/dialog'
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser'
 import { TranslateService } from '@ngx-translate/core'
 import { SocketIoService } from '../Services/socket-io.service'
 import { SnackBarHelperService } from '../Services/snack-bar-helper.service'
@@ -48,7 +47,7 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
   public pageSizeOptions: number[] = []
   public dataSource!: MatTableDataSource<TableEntry>
   public gridDataSource!: any
-  public searchValue?: SafeHtml
+  public searchValue?: string
   public resultsLength = 0
   @ViewChild(MatPaginator, { static: true }) paginator: MatPaginator | null = null
   private productSubscription?: Subscription
@@ -58,7 +57,7 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
 
   constructor (private deluxeGuard: DeluxeGuard, private dialog: MatDialog, private productService: ProductService,
    private quantityService: QuantityService, private basketService: BasketService, private translateService: TranslateService,
-   private router: Router, private route: ActivatedRoute, private sanitizer: DomSanitizer, private ngZone: NgZone, private io: SocketIoService,
+   private router: Router, private route: ActivatedRoute, private ngZone: NgZone, private io: SocketIoService,
    private snackBarHelperService: SnackBarHelperService, private cdRef: ChangeDetectorRef) { }
 
   ngAfterViewInit () {
@@ -67,7 +66,6 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
     forkJoin([quantities, products]).subscribe(([quantities, products]) => {
       let dataTable: TableEntry[] = []
       this.tableData = products
-      this.trustProductDescription(products)
       for (const product of products) {
         dataTable.push({
           name: product.name,
@@ -141,7 +139,7 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
         this.io.socket().emit('verifyLocalXssChallenge', queryParam)
       })
       this.dataSource.filter = queryParam.toLowerCase()
-      this.searchValue = this.sanitizer.bypassSecurityTrustHtml(queryParam)
+      this.searchValue = queryParam
       this.gridDataSource.subscribe((result: any) => {
         if (result.length === 0) {
           this.emptyState = true
@@ -217,12 +215,6 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
         })
       }
     }, (err) => console.log(err))
-  }
-
-  trustProductDescription (tableData: any[]) {
-    for (let i = 0; i < tableData.length; i++) {
-      tableData[i].description = this.sanitizer.bypassSecurityTrustHtml(tableData[i].description)
-    }
   }
 
   isLoggedIn () {

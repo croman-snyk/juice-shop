@@ -13,6 +13,20 @@ module.exports = function profileImageUrlUpload () {
   return (req, res, next) => {
     if (req.body.imageUrl !== undefined) {
       const url = req.body.imageUrl
+      try {
+        const parsedUrl = new URL(url)
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          throw new Error('Invalid protocol')
+        }
+        const hostname = parsedUrl.hostname.toLowerCase()
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname.includes('internal') || hostname.includes('local')) {
+          throw new Error('Blocked hostname')
+        }
+      } catch (error) {
+        logger.warn('Invalid URL provided: ' + error.message)
+        next(new Error('Invalid image URL'))
+        return
+      }
       if (url.match(/(.)*solve\/challenges\/server-side(.)*/) !== null) req.app.locals.abused_ssrf_bug = true
       const loggedInUser = insecurity.authenticatedUsers.get(req.cookies.token)
       if (loggedInUser) {

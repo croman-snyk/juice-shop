@@ -10,8 +10,9 @@ const insecurity = require('../lib/insecurity')
 
 module.exports = function productReviews () {
   return (req, res, next) => {
-    const user = insecurity.authenticatedUsers.from(req)
-    db.reviews.update(
+    // const user = insecurity.authenticatedUsers.from(req)
+    const user = await User.findOne({ _id: req.user._id }).populate('likes')
+    user.update(
       { _id: req.body.id },
       { $set: { message: req.body.message } },
       { multi: true }

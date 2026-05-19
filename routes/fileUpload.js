@@ -32,8 +32,7 @@ function handleZipFileUpload ({ file }, res, next) {
   if (utils.endsWith(file.originalname.toLowerCase(), '.zip')) {
     if (file.buffer && !utils.disableOnContainerEnv()) {
       const buffer = file.buffer
-      const filename = file.originalname.toLowerCase()
-      const tempFile = path.join(os.tmpdir(), filename)
+      const tempFile = path.join(os.tmpdir(), 'temp_' + Date.now() + '.zip')
       fs.open(tempFile, 'w', function (err, fd) {
         if (err) { next(err) }
         fs.write(fd, buffer, 0, buffer.length, null, function (err) {
@@ -43,10 +42,17 @@ function handleZipFileUpload ({ file }, res, next) {
               .pipe(unzipper.Parse())
               .on('entry', function (entry) {
                 const fileName = entry.path
-                const absolutePath = path.resolve('uploads/complaints/' + fileName)
-                utils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
-                if (absolutePath.includes(path.resolve('.'))) {
-                  entry.pipe(fs.createWriteStream('uploads/complaints/' + fileName).on('error', function (err) { next(err) }))
+                if (path.isAbsolute(fileName)) {
+                  entry.autodrain()
+                  return
+                }
+                const normalizedFileName = path.normalize(fileName).replace(/^(\.\.[\/\\])+/, '')
+                const targetDir = path.resolve('uploads/complaints/')
+                const targetPath = path.join(targetDir, normalizedFileName)
+                const resolvedPath = path.resolve(targetPath)
+                utils.solveIf(challenges.fileWriteChallenge, () => { return resolvedPath === path.resolve('ftp/legal.md') })
+                if (resolvedPath.startsWith(targetDir + path.sep)) {
+                  entry.pipe(fs.createWriteStream(targetPath).on('error', function (err) { next(err) }))
                 } else {
                   entry.autodrain()
                 }
