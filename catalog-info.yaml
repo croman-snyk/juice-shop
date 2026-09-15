@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: juice-shop
+  title: Juice Shop Test
+spec:
+  type: medical-device
+  owner: clinical-platform-team
+  lifecycle: production
