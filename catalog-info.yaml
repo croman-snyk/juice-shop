@@ -4,6 +4,6 @@ metadata:
   name: juice-shop
   title: Juice Shop Test
 spec:
-  type: medical-device
+  type: class-a
   owner: clinical-platform-team
   lifecycle: production
